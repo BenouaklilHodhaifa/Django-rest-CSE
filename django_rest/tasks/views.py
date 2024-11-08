@@ -5,11 +5,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from .models import Project, Task
 from .serializers import ProjectSerializer, TaskSerializer, UserSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from .permissions import IsProjectManagerOrAdmin, IsTaskOwnerOrProjectManager
 
 User = get_user_model()
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsProjectManagerOrAdmin])
 def project_list(request):
     user = User.objects.get(email=request.user)
 
@@ -26,6 +28,7 @@ def project_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsProjectManagerOrAdmin])
 def project_detail(request, pk):
     try:
         project = Project.objects.get(pk=pk)
@@ -63,11 +66,15 @@ def task_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsTaskOwnerOrProjectManager])
 def task_detail(request, pk):
     try:
         task = Task.objects.get(pk=pk)
     except Task.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+    
+    if not IsTaskOwnerOrProjectManager().has_object_permission(request, None, task):
+        return Response(status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
         serializer = TaskSerializer(task)

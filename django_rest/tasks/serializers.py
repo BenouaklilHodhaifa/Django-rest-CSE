@@ -6,7 +6,10 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'role')
+        fields = ('id', 'email', 'password', 'role')
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
     
     def create(self, validated_data):      
         role = validated_data.pop('role', None)
@@ -14,7 +17,17 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("role field is required.")
         
         validated_data['username'] = validated_data['email']
-        user = User.objects.create_user(role=role, **validated_data)
+
+        password = validated_data.pop('password', None)
+        if not password:
+            raise serializers.ValidationError("password field is required.")
+        
+        if role == 'ADMIN':
+            user = User.objects.create_superuser(password=password, role=role, **validated_data)
+        else:
+            user = User.objects.create_user(password=password, role=role, **validated_data)
+        user.is_active = True
+        user.save()
         return user
         
 
@@ -24,7 +37,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['id', 'name', 'description', 'created_at', 'owner']
-        eextra_kwargs = {
+        extra_kwargs = {
             'created_at': {'read_only': True},
             'owner': {'read_only': True}
             }
