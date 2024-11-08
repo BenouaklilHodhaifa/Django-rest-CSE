@@ -11,6 +11,8 @@ User = get_user_model()
 
 @api_view(['GET', 'POST'])
 def project_list(request):
+    user = User.objects.get(email=request.user)
+
     if request.method == 'GET':
         projects = Project.objects.all()
         serializer = ProjectSerializer(projects, many=True)
@@ -19,7 +21,7 @@ def project_list(request):
     elif request.method == 'POST':
         serializer = ProjectSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -46,6 +48,8 @@ def project_detail(request, pk):
 
 @api_view(['GET', 'POST'])
 def task_list(request):
+    user = User.objects.get(email=request.user)
+    
     if request.method == 'GET':
         tasks = Task.objects.all()
         serializer = TaskSerializer(tasks, many=True)
@@ -54,7 +58,7 @@ def task_list(request):
     elif request.method == 'POST':
         serializer = TaskSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(created_by=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
